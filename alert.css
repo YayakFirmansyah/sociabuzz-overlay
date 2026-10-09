@@ -159,6 +159,7 @@ div.mib {
 .mib .mib-platform,
 .mib .mib-caption,
 .mib .mib-name,
+.mib .mib-name-ghost,
 .mib .mib-amount-value {
   font-family: 'Outfit', sans-serif;
 }
@@ -192,7 +193,9 @@ div.mib {
   gap: 16px;
 }
 
+/* Profil mengisi seluruh ruang di kiri kotak nominal (ruang ini dipakai nama) */
 .mib .mib-profile {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -212,6 +215,7 @@ div.mib {
 }
 
 .mib .mib-info {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -226,17 +230,98 @@ div.mib {
   color: #d8b4fe;
 }
 
-.mib .mib-name {
+/* ---------- Nama donatur: mengecil otomatis jika terlalu panjang ----------
+   Struktur HTML:
+     .mib-name-box     → lebar = ruang yang tersedia (W)
+       .mib-name-fit   → lebar = lebar nama pada ukuran penuh (T)
+         .mib-name     → nama yang terlihat
+       .mib-name-ghost → salinan nama tak terlihat, untuk mengukur T
+
+   Ukuran huruf = 25px × W ÷ T, dibatasi antara 14px dan 25px.
+   Jika di 14px masih tidak muat, nama turun ke 2 baris lalu dipotong "…".
+   Pembagian dua panjang (W ÷ T) memakai trik tan(atan2(W, T)), dan
+   @property dipakai untuk "membekukan" nilai 100cqi menjadi px di tiap level.
+   Browser lama (OBS < 31) otomatis kembali ke 25px + elipsis "…". */
+@property --mib-ruang {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --mib-panjang {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* Tampilan dasar (juga dipakai browser lama): 25px, dipotong "…" */
+.mib .mib-name-box {
+  min-width: 0;
+  font-size: 25px;
+}
+
+.mib .mib-name-ghost {
+  display: none;
+}
+
+.mib .mib-name,
+.mib .mib-name-ghost {
   font-size: 25px;
   font-weight: 900;
   letter-spacing: -0.2px;
-  color: #ffffff;
+  line-height: 30px;
   white-space: nowrap;
+}
+
+.mib .mib-name {
+  display: block;
+  color: #ffffff;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow:
     0 0 12px rgba(192, 132, 252, 0.7),
     0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Mode mengecil otomatis (OBS 31+ / Chrome 111+) */
+@supports (width: 1cqi) and (width: calc(1px * tan(atan2(1px, 1px)))) {
+  .mib .mib-name-box {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: max-content;
+  }
+
+  .mib .mib-name-fit,
+  .mib .mib-name-ghost {
+    grid-area: 1 / 1;
+  }
+
+  .mib .mib-name-fit {
+    container-type: inline-size;
+    align-self: center;
+    --mib-ruang: 100cqi;
+  }
+
+  .mib .mib-name-ghost {
+    display: block;
+    visibility: hidden;
+  }
+
+  /* Jika di 14px masih tidak muat: turun ke baris ke-2, lalu baru dipotong "…".
+     Faktor 0.98 memberi sedikit ruang agar nama yang pas tidak ikut turun baris. */
+  .mib .mib-name {
+    --mib-panjang: 100cqi;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    width: max-content;
+    max-width: var(--mib-ruang);
+    font-size: clamp(14px, 25px * 0.98 * tan(atan2(var(--mib-ruang), var(--mib-panjang))), 25px);
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 .mib .mib-amount {
